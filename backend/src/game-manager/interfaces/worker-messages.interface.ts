@@ -7,6 +7,7 @@ export type WorkerCommandType =
   | 'START'
   | 'REVEAL'
   | 'FLAG'
+  | 'SOLVE'
   | 'DISCONNECT'
   | 'RECONNECT'
   | 'SHUTDOWN'
@@ -36,6 +37,10 @@ export interface WorkerStartPayload {
   requesterId: string;
 }
 
+export interface WorkerSolvePayload {
+  requesterId: string;
+}
+
 export interface WorkerRevealPayload {
   playerId: string;
   row: number;
@@ -57,6 +62,7 @@ export type WorkerCommandPayload =
   | WorkerJoinPayload
   | WorkerLeavePayload
   | WorkerStartPayload
+  | WorkerSolvePayload
   | WorkerRevealPayload
   | WorkerFlagPayload
   | WorkerPlayerPayload

@@ -31,7 +31,7 @@ export class FloodFillService {
       visited.add(key);
 
       const cell = board[row][column];
-      if (cell.revealed || cell.flagged) {
+      if (cell.revealed || cell.flagged || cell.hasMine) {
         continue;
       }
 
@@ -52,10 +52,10 @@ export class FloodFillService {
           continue;
         }
 
-        neighbor.revealed = true;
-
         if (neighbor.adjacentMines === 0) {
           queue.push([neighborRow, neighborColumn]);
+        } else {
+          neighbor.revealed = true;
         }
       }
     }

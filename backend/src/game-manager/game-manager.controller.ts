@@ -12,6 +12,7 @@ import { JoinRoomDto } from './dto/join-room.dto';
 import { ListRoomsQueryDto } from './dto/list-rooms-query.dto';
 import { PlayerCellActionDto } from './dto/player-cell-action.dto';
 import { RoomIdParamDto } from './dto/room-id-param.dto';
+import { AutoSolveRoomDto } from './dto/auto-solve-room.dto';
 import { StartRoomDto } from './dto/start-room.dto';
 import type { PublicRoomState } from './interfaces/public-room-state.interface';
 import { GameManagerService } from './services/game-manager.service';
@@ -73,5 +74,13 @@ export class GameManagerController {
     @Body() dto: PlayerCellActionDto,
   ): Promise<PublicRoomState> {
     return this.gameManagerService.toggleFlag(params.id, dto);
+  }
+
+  @Post(':id/auto-solve')
+  autoSolveRoom(
+    @Param() params: RoomIdParamDto,
+    @Body() dto: AutoSolveRoomDto,
+  ): Promise<PublicRoomState> {
+    return this.gameManagerService.autoSolveRoom(params.id, dto);
   }
 }

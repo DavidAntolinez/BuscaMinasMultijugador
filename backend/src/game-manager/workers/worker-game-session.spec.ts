@@ -163,6 +163,38 @@ describe('WorkerGameSession', () => {
     ).toBeDefined();
   });
 
+  it('should auto solve only for creator and finish the game', () => {
+    initRoom();
+    session.handleCommand({
+      correlationId: 'start',
+      command: 'START',
+      payload: { requesterId: 'creator-1' },
+    });
+
+    const denied = session.handleCommand({
+      correlationId: 'solve-denied',
+      command: 'SOLVE',
+      payload: { requesterId: 'player-2' },
+    });
+    expect(denied.success).toBe(false);
+
+    const solved = session.handleCommand({
+      correlationId: 'solve',
+      command: 'SOLVE',
+      payload: { requesterId: 'creator-1' },
+    });
+
+    expect(solved.success).toBe(true);
+    expect(solved.room?.status).toBe(RoomStatus.FINISHED);
+    expect(events.some((event) => event.event === 'cell.revealed')).toBe(true);
+    expect(
+      events.some(
+        (event) => event.event === 'game.won' || event.event === 'game.lost',
+      ),
+    ).toBe(true);
+    expect(events.some((event) => event.event === 'room.finished')).toBe(true);
+  });
+
   it('should cancel room when last player leaves', () => {
     initRoom();
 

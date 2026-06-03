@@ -93,6 +93,10 @@ export class WorkerRegistryService implements OnModuleDestroy {
     return workerId;
   }
 
+  hasWorker(roomId: string): boolean {
+    return this.workers.has(roomId);
+  }
+
   async sendCommand(
     roomId: string,
     command: WorkerCommandType,
@@ -190,8 +194,14 @@ export class WorkerRegistryService implements OnModuleDestroy {
         message.event === 'room.finished' &&
         message.payload.reason !== undefined
       ) {
-        void this.shutdownWorker(roomId);
+        void this.cleanupFinishedRoom(roomId);
       }
     }
+  }
+
+  private async cleanupFinishedRoom(roomId: string): Promise<void> {
+    await this.shutdownWorker(roomId);
+    this.roomStore.delete(roomId);
+    this.logger.log(`Sala ${roomId} finalizada: worker y registro eliminados`);
   }
 }

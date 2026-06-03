@@ -60,6 +60,26 @@ describe('GameEngineService', () => {
     expect(game.board[1][1].revealed).toBe(false);
   });
 
+  it('should flood fill across a long connected zero region', () => {
+    const game = createManualGame();
+    for (let row = 0; row < game.rows; row += 1) {
+      for (let column = 0; column < game.columns; column += 1) {
+        const cell = game.board[row][column];
+        cell.hasMine = false;
+        cell.adjacentMines = 0;
+      }
+    }
+    game.board[2][2].adjacentMines = 1;
+    game.board[2][2].hasMine = false;
+
+    service.revealCell(game, 0, 0);
+
+    expect(game.board[0][0].revealed).toBe(true);
+    expect(game.board[0][2].revealed).toBe(true);
+    expect(game.board[2][0].revealed).toBe(true);
+    expect(game.board[2][2].revealed).toBe(true);
+  });
+
   it('should lose and reveal all mines when hitting a mine', () => {
     const game = createManualGame();
 

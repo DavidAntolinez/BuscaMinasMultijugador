@@ -8,6 +8,8 @@ import { Game } from '../models/game.model';
 @Injectable()
 export class BoardMapperService {
   toPublicState(game: Game, outcome?: 'victory' | 'defeat'): GameState {
+    const resolvedOutcome = outcome ?? this.resolveOutcome(game);
+
     return {
       id: game.id,
       rows: game.rows,
@@ -17,13 +19,24 @@ export class BoardMapperService {
       createdAt: game.createdAt.toISOString(),
       updatedAt: game.updatedAt.toISOString(),
       board: this.toPublicBoard(game),
-      ...(outcome ? { outcome } : {}),
+      ...(resolvedOutcome ? { outcome: resolvedOutcome } : {}),
     };
   }
 
+  private resolveOutcome(game: Game): 'victory' | 'defeat' | undefined {
+    if (game.status === GameStatus.LOST) {
+      return 'defeat';
+    }
+
+    if (game.status === GameStatus.WON || game.status === GameStatus.SOLVED) {
+      return 'victory';
+    }
+
+    return undefined;
+  }
+
   private toPublicBoard(game: Game): PublicCell[][] {
-    const showAllMines =
-      game.status === GameStatus.LOST || game.status === GameStatus.SOLVED;
+    const showAllMines = game.status === GameStatus.LOST;
 
     return game.board.map((row) =>
       row.map((cell) => this.toPublicCell(cell, showAllMines)),

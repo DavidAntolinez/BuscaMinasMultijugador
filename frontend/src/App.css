@@ -200,6 +200,48 @@
   background: var(--accent-bg);
 }
 
+.game-finished-banner {
+  display: grid;
+  gap: 10px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--code-bg);
+}
+
+.game-finished-banner--victory {
+  border-color: rgba(22, 163, 74, 0.45);
+  background: rgba(22, 163, 74, 0.1);
+}
+
+.game-finished-banner--defeat {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.game-finished-banner__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.game-finished-banner__outcome {
+  margin: 0;
+  color: var(--text-h);
+}
+
+.game-finished-banner__detail {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.game-controls {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .turn-info {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
@@ -247,8 +289,12 @@
   background: rgba(217, 119, 6, 0.15);
 }
 
-.cell--mine {
-  background: rgba(220, 38, 38, 0.2);
+.cell--mine-hit {
+  background: rgba(220, 38, 38, 0.35);
+}
+
+.cell--mine-hidden {
+  background: rgba(220, 38, 38, 0.15);
 }
 
 .cell--disabled {

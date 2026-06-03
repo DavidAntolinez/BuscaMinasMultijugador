@@ -79,13 +79,41 @@ export class GameManagerGateway
 
   handleConnection(client: GameSocket): void {
     client.data.connectedAt = new Date().toISOString();
-    this.logger.log(`Game client connected: ${client.id}`);
+    const { address, headers, query, auth } = client.handshake;
+    const userAgent =
+      typeof headers['user-agent'] === 'string' ? headers['user-agent'] : 'unknown';
+
+    this.logger.log(
+      [
+        `Game client connected: ${client.id}`,
+        `namespace=/game`,
+        `ip=${address ?? 'unknown'}`,
+        `userAgent=${userAgent}`,
+        `query=${JSON.stringify(query)}`,
+        `auth=${JSON.stringify(auth ?? {})}`,
+        `origin=${String(headers.origin ?? headers.referer ?? 'unknown')}`,
+      ].join(' | '),
+    );
   }
 
   async handleDisconnect(client: GameSocket): Promise<void> {
     const { roomId, playerId } = client.data;
-    if (roomId && playerId) {
+    this.logger.log(
+      `Game client disconnected: ${client.id} | roomId=${roomId ?? 'none'} | playerId=${playerId ?? 'none'}`,
+    );
+    delete client.data.roomId;
+    delete client.data.playerId;
+
+    if (!roomId || !playerId) {
+      return;
+    }
+
+    try {
       await this.gameManagerService.handlePlayerDisconnect(roomId, playerId);
+    } catch (error) {
+      this.logger.warn(
+        `Error procesando desconexión de ${playerId} en sala ${roomId}: ${error instanceof Error ? error.message : 'error desconocido'}`,
+      );
     }
   }
 

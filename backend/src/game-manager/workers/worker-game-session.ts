@@ -2,6 +2,7 @@ import { GameStatus } from '../../minesweeper/enums/game-status.enum';
 import { Game } from '../../minesweeper/models/game.model';
 import { BoardGeneratorService } from '../../minesweeper/services/board-generator.service';
 import { BoardMapperService } from '../../minesweeper/services/board-mapper.service';
+import { AutoSolverService } from '../../minesweeper/services/auto-solver.service';
 import { FloodFillService } from '../../minesweeper/services/flood-fill.service';
 import { GameEngineService } from '../../minesweeper/services/game-engine.service';
 import { VictoryCheckerService } from '../../minesweeper/services/victory-checker.service';
@@ -20,6 +21,7 @@ import {
   WorkerPlayerPayload,
   WorkerRevealPayload,
   WorkerResponseMessage,
+  WorkerSolvePayload,
   WorkerStartPayload,
 } from '../interfaces/worker-messages.interface';
 import { TurnManager } from './turn-manager';
@@ -30,6 +32,7 @@ export class WorkerGameSession {
   private readonly turnManager = new TurnManager();
   private readonly boardMapper = new BoardMapperService();
   private readonly gameEngine: GameEngineService;
+  private readonly autoSolver: AutoSolverService;
   private readonly victoryChecker = new VictoryCheckerService();
   private room: GameRoom | null = null;
   private game: Game | null = null;
@@ -41,6 +44,10 @@ export class WorkerGameSession {
       new FloodFillService(boardGenerator),
       this.victoryChecker,
       boardGenerator,
+    );
+    this.autoSolver = new AutoSolverService(
+      this.gameEngine,
+      this.victoryChecker,
     );
     this.emitEvent = emitEvent;
   }
@@ -60,6 +67,8 @@ export class WorkerGameSession {
           return this.handleReveal(message.correlationId, message.payload);
         case 'FLAG':
           return this.handleFlag(message.correlationId, message.payload);
+        case 'SOLVE':
+          return this.handleSolve(message.correlationId, message.payload);
         case 'DISCONNECT':
           return this.handleDisconnect(message.correlationId, message.payload);
         case 'RECONNECT':
@@ -293,6 +302,56 @@ export class WorkerGameSession {
     return this.successResponse(correlationId);
   }
 
+  private handleSolve(
+    correlationId: string,
+    payload: WorkerCommandPayload,
+  ): WorkerResponseMessage {
+    const solvePayload = payload as WorkerSolvePayload;
+    const room = this.requireRoom();
+    const game = this.requireGame();
+
+    if (solvePayload.requesterId !== room.creatorId) {
+      return this.errorResponse(
+        correlationId,
+        'Solo el creador puede autoresolver la partida',
+      );
+    }
+
+    this.assertRoomPlayable(room);
+    this.turnManager.clearTimer();
+
+    const result = this.autoSolver.solve(game);
+
+    this.publishEvent('cell.revealed', {
+      playerId: solvePayload.requesterId,
+      autoSolved: true,
+      board: this.boardMapper.toPublicState(game).board,
+    });
+
+    if (result.outcome === 'defeat' || game.status === GameStatus.LOST) {
+      this.publishEvent('game.lost', {
+        playerId: solvePayload.requesterId,
+        room: this.toPublicState(),
+      });
+      this.finishRoom(RoomStatus.FINISHED, 'room.finished', {
+        reason: 'lost',
+        autoSolved: true,
+      });
+      return this.successResponse(correlationId);
+    }
+
+    this.publishEvent('game.won', {
+      playerId: solvePayload.requesterId,
+      room: this.toPublicState(),
+    });
+    this.finishRoom(RoomStatus.FINISHED, 'room.finished', {
+      reason: 'won',
+      autoSolved: true,
+    });
+
+    return this.successResponse(correlationId);
+  }
+
   private handleFlag(
     correlationId: string,
     payload: WorkerCommandPayload,
@@ -477,6 +536,7 @@ export class WorkerGameSession {
   toPublicState(): PublicRoomState {
     const room = this.requireRoom();
     const game = this.game;
+    const mappedGame = game ? this.boardMapper.toPublicState(game) : null;
 
     return {
       id: room.id,
@@ -501,10 +561,9 @@ export class WorkerGameSession {
         room.status === RoomStatus.IN_PROGRESS ||
         room.status === RoomStatus.FINISHED ||
         room.status === RoomStatus.PAUSED
-          ? game
-            ? this.boardMapper.toPublicState(game).board
-            : undefined
+          ? mappedGame?.board
           : undefined,
+      outcome: mappedGame?.outcome,
     };
   }
 

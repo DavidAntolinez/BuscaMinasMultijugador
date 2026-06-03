@@ -63,4 +63,13 @@ describe('FloodFillService', () => {
     expect(board[1][1].revealed).toBe(false);
     expect(board[1][1].hasMine).toBe(true);
   });
+
+  it('should expand through a chain of zero cells beyond immediate neighbors', () => {
+    const board = buildBoard(['0000', '0000']);
+
+    service.expand(board, 2, 4, 0, 0);
+
+    expect(board[0].every((cell) => cell.revealed)).toBe(true);
+    expect(board[1].every((cell) => cell.revealed)).toBe(true);
+  });
 });

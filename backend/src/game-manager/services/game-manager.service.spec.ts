@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoomStatus } from '../enums/room-status.enum';
 import { GameManagerModule } from '../game-manager.module';
@@ -46,6 +46,7 @@ describe('GameManagerService', () => {
       spawnWorker: jest.fn().mockResolvedValue('worker-1'),
       sendCommand: jest.fn(),
       shutdownWorker: jest.fn(),
+      hasWorker: jest.fn().mockReturnValue(true),
     } as unknown as jest.Mocked<WorkerRegistryService>;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -126,5 +127,50 @@ describe('GameManagerService', () => {
     });
 
     expect(joined.players).toHaveLength(2);
+  });
+
+  it('should ignore disconnect for finished rooms without worker commands', async () => {
+    const room = {
+      ...sampleRoom(),
+      status: RoomStatus.FINISHED,
+      finishedAt: new Date().toISOString(),
+    };
+    roomStore.save(room);
+    workerRegistry.hasWorker.mockReturnValue(false);
+
+    await service.handlePlayerDisconnect('room-1', 'creator-1');
+
+    expect(workerRegistry.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('should ignore disconnect when worker was already released', async () => {
+    roomStore.save(sampleRoom());
+    workerRegistry.hasWorker.mockReturnValue(false);
+
+    await service.handlePlayerDisconnect('room-1', 'creator-1');
+
+    expect(workerRegistry.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('should reject auto solve from non-creator', async () => {
+    const room = { ...sampleRoom(), status: RoomStatus.IN_PROGRESS };
+    roomStore.save(room);
+
+    await expect(
+      service.autoSolveRoom('room-1', { requesterId: 'player-2' }),
+    ).rejects.toThrow(ForbiddenException);
+    expect(workerRegistry.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('should reject reconnect for finished rooms', async () => {
+    roomStore.save({
+      ...sampleRoom(),
+      status: RoomStatus.FINISHED,
+      finishedAt: new Date().toISOString(),
+    });
+
+    await expect(
+      service.handlePlayerReconnect('room-1', 'creator-1'),
+    ).rejects.toThrow(BadRequestException);
   });
 });

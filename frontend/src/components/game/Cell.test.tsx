@@ -23,6 +23,25 @@ describe('Cell', () => {
     expect(screen.getByText('3')).toBeInTheDocument()
   })
 
+  it('shows unrevealed mines after defeat', () => {
+    render(
+      <Cell
+        cell={{
+          row: 1,
+          column: 1,
+          revealed: false,
+          flagged: false,
+          hasMine: true,
+        }}
+        disabled
+        onReveal={vi.fn()}
+        onToggleFlag={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('💣')).toBeInTheDocument()
+  })
+
   it('blocks interaction when disabled', async () => {
     const user = userEvent.setup()
     const onReveal = vi.fn()

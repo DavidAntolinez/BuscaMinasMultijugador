@@ -5,7 +5,7 @@ import {
   gameSocket,
 } from '../services/gameSocket.service'
 import { useGameStore } from '../stores/gameStore'
-import { buildGameResult } from '../utils/game.utils'
+import { resolveGameEndFromRoom } from '../utils/gameEnd.utils'
 import { mergeRoomFromSocketPayload } from '../utils/roomState.utils'
 
 export function useGameSocket(roomId: string | undefined): void {
@@ -22,10 +22,10 @@ export function useGameSocket(roomId: string | undefined): void {
       return
     }
 
+    gameSocket.acquireSession()
     setConnectionStatus('connecting')
     gameSocket.connect()
     gameSocket.subscribeRoom(roomId, playerId)
-    setConnectionStatus('connected')
 
     const syncRoomFromPayload = (payload: Record<string, unknown>) => {
       const currentRoom = useGameStore.getState().room
@@ -36,6 +36,15 @@ export function useGameSocket(roomId: string | undefined): void {
       if (nextRoom) {
         setRoom(nextRoom)
         setTurnRemainingMs(nextRoom.turnRemainingMs)
+        const winnerId =
+          typeof payload.playerId === 'string' && nextRoom.outcome === 'victory'
+            ? payload.playerId
+            : undefined
+        const endResult = resolveGameEndFromRoom(nextRoom, winnerId)
+        if (endResult) {
+          setGameResult(endResult)
+          gameSocket.endRoomSession(roomId)
+        }
       }
     }
 
@@ -43,6 +52,7 @@ export function useGameSocket(roomId: string | undefined): void {
       gameSocket.on('room.joined', syncRoomFromPayload),
       gameSocket.on('room.left', syncRoomFromPayload),
       gameSocket.on('room.started', (payload) => {
+        setGameResult(null)
         syncRoomFromPayload(payload)
         const turnOrder = payload.turnOrder
         if (Array.isArray(turnOrder)) {
@@ -56,28 +66,13 @@ export function useGameSocket(roomId: string | undefined): void {
       gameSocket.on('cell.revealed', syncRoomFromPayload),
       gameSocket.on('flag.placed', syncRoomFromPayload),
       gameSocket.on('flag.removed', syncRoomFromPayload),
-      gameSocket.on('game.won', (payload) => {
-        syncRoomFromPayload(payload)
-        const room = extractRoomFromPayload(payload)
-        if (room) {
-          const winnerId =
-            typeof payload.playerId === 'string' ? payload.playerId : null
-          setGameResult(buildGameResult(room, 'victory', winnerId))
-          navigate('/game-over')
-        }
-      }),
-      gameSocket.on('game.lost', (payload) => {
-        syncRoomFromPayload(payload)
-        const room = extractRoomFromPayload(payload)
-        if (room) {
-          setGameResult(buildGameResult(room, 'defeat'))
-          navigate('/game-over')
-        }
-      }),
+      gameSocket.on('game.won', syncRoomFromPayload),
+      gameSocket.on('game.lost', syncRoomFromPayload),
       gameSocket.on('room.finished', (payload) => {
         syncRoomFromPayload(payload)
         const room = extractRoomFromPayload(payload)
-        if (room && room.status === 'CANCELLED') {
+        if (room?.status === 'CANCELLED') {
+          gameSocket.endRoomSession(roomId)
           navigate('/')
         }
       }),
@@ -105,6 +100,7 @@ export function useGameSocket(roomId: string | undefined): void {
         unsubscribe()
       }
       gameSocket.unsubscribeRoom(roomId)
+      gameSocket.releaseSession()
     }
   }, [
     navigate,

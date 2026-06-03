@@ -56,4 +56,11 @@ export const gameApi = {
       body: JSON.stringify(payload),
     })
   },
+
+  autoSolveRoom(roomId: string, requesterId: string): Promise<PublicRoomState> {
+    return apiRequest(`/game-manager/rooms/${roomId}/auto-solve`, {
+      method: 'POST',
+      body: JSON.stringify({ requesterId }),
+    })
+  },
 }

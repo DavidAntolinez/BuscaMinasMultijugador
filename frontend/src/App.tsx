@@ -1,5 +1,4 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { GameOverPage } from './pages/GameOverPage'
 import { GamePage } from './pages/GamePage'
 import { MainMenuPage } from './pages/MainMenuPage'
 import { WaitingRoomPage } from './pages/WaitingRoomPage'
@@ -12,7 +11,7 @@ function App() {
         <Route path="/" element={<MainMenuPage />} />
         <Route path="/waiting/:roomId" element={<WaitingRoomPage />} />
         <Route path="/game/:roomId" element={<GamePage />} />
-        <Route path="/game-over" element={<GameOverPage />} />
+        <Route path="/game-over" element={<Navigate to="/" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

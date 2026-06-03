@@ -28,4 +28,5 @@ export interface PublicRoomState {
   finishedAt: string | null;
   workerId: string;
   board?: PublicCell[][];
+  outcome?: 'victory' | 'defeat';
 }

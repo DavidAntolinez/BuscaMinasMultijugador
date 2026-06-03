@@ -8,15 +8,22 @@ interface CellProps {
 }
 
 export function Cell({ cell, disabled, onReveal, onToggleFlag }: CellProps) {
+  const showExposedMine = Boolean(cell.hasMine) && !cell.flagged
   const classNames = [
     'cell',
     cell.revealed ? 'cell--revealed' : '',
     cell.flagged ? 'cell--flagged' : '',
-    cell.revealed && cell.hasMine ? 'cell--mine' : '',
+    cell.revealed && cell.hasMine ? 'cell--mine cell--mine-hit' : '',
+    showExposedMine && !cell.revealed ? 'cell--mine cell--mine-hidden' : '',
     disabled ? 'cell--disabled' : '',
   ]
     .filter(Boolean)
     .join(' ')
+
+  const showFlag = cell.flagged && !cell.revealed
+  const showMine = showExposedMine
+  const showAdjacent =
+    cell.revealed && !cell.hasMine && typeof cell.adjacentMines === 'number'
 
   return (
     <button
@@ -32,11 +39,9 @@ export function Cell({ cell, disabled, onReveal, onToggleFlag }: CellProps) {
       }}
       aria-label={`Celda ${cell.row}, ${cell.column}`}
     >
-      {cell.flagged && !cell.revealed ? '🚩' : null}
-      {cell.revealed && cell.hasMine ? '💣' : null}
-      {cell.revealed && !cell.hasMine && cell.adjacentMines
-        ? cell.adjacentMines
-        : null}
+      {showFlag ? '🚩' : null}
+      {showMine ? '💣' : null}
+      {showAdjacent ? cell.adjacentMines : null}
     </button>
   )
 }
